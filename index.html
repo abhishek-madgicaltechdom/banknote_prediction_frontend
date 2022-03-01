@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            text-align: center;
+            background: linear-gradient(0deg, #f9f8fe, #f9f8fe);
+            height: 98vh;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Inter", sans-serif;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            width: 70%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .heading {
+            font-size: 1.75rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 700;
+            color: #172b4d;
+        }
+        
+        table {
+            box-shadow: 0 4px 11px -4px rgb(23 43 77 / 16%);
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 70%;
+        }
+
+        tr,
+        th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+            background-color: #6c6c6c;
+            color: #fff;
+        }
+
+        td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+            background-color: #fff;
+            color: #6c6c6c;
+        }
+
+        /* tr:nth-child(even) {
+            background-color: #dddddd;
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+            background-color: rgb(226, 43, 43);
+            color: #6c6c6c;
+        } */
+        .btn {
+            margin: 1px;
+        }
+        .prediction {
+            background: #6e40ff;
+            border: 1px solid #6e40ff;
+            border-radius: 4px;
+            display: block;
+            /* width: 100%; */
+            color: #fff;
+            height: 2.75rem;
+            font-weight: 700;
+            font-size: .975rem;
+            /* margin-bottom: 1rem; */
+            cursor: pointer;
+            margin: 10px 0px;
+        }
+        .pagination {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="prediction" onclick="makePrediction()">API Call</button>
+            <h1 class="heading">All API Called</h1>
+            <div></div>
+
+        </div>
+
+        <table class="table_data"></table>
+
+    </div>
+
+    <div class="pagination">
+        <div id="pagination-wrapper"></div>
+    </div>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+
+        var table_data = []
+
+        state = {
+            // 'querySet': table_data,
+
+            'page': 1,
+            'rows': 10,
+            'window': 5
+        }
+
+        window.addEventListener('load', async function () {
+            await axios.get('http://0.0.0.0:3030').then(
+                (res) => {
+                    var result = res.data;
+                    table_data = result
+                    state.querySet = result
+                    console.log(result);
+                }
+            )
+            makeTable()
+        })
+
+
+
+        function pagination(querySet, page, rows) {
+            var trimStart = (page - 1) * rows
+            var trimEnd = trimStart + rows
+            trimmedData = querySet.slice(trimStart, trimEnd)
+            var pages = Math.round(querySet.length / rows);
+
+            return {
+                'querySet': trimmedData,
+                'pages': pages,
+            }
+        }
+
+        function makeTable() {
+            var data = pagination(state.querySet, state.page, state.rows)
+            var myList = data.querySet
+            table = document.querySelector('.table_data');
+            table.innerHTML = `<tr>
+                <th>Id</th>
+                <th>Input</th>
+                <th>Output</th>
+                <th>API Type</th>
+                <th>CreatedAt</th>
+            </tr>`
+            myList.map((item) => {
+
+                singleRow = `
+                            <tr>
+                                <td>${item.id}</td>
+                                <td>${item.input}</td>
+                                <td>${item.output}</td>
+                                <td>${item.api_type}</td>
+                                <td>${item.CreateAt}</td>
+                            </tr>
+                                            `
+                table.innerHTML += singleRow
+            })
+            pageButtons(data.pages)
+        }
+
+        function pageButtons(pages) {
+            var wrapper = document.getElementById('pagination-wrapper')
+
+            wrapper.innerHTML = ``
+
+            var maxLeft = (state.page - Math.floor(state.window / 2))
+            var maxRight = (state.page + Math.floor(state.window / 2))
+
+            if (maxLeft < 1) {
+                maxLeft = 1
+                maxRight = state.window
+            }
+
+            if (maxRight > pages) {
+                maxLeft = pages - (state.window - 1)
+
+                if (maxLeft < 1) {
+                    maxLeft = 1
+                }
+                maxRight = pages
+            }
+
+            for (var page = maxLeft; page <= maxRight; page++) {
+                wrapper.innerHTML += `<button value=${page} class="page btn btn-sm btn-dark">${page}</button>`
+            }
+
+            if (state.page != 1) {
+                wrapper.innerHTML = `<button value=${1} class="page btn btn-sm btn-dark">&#171; First</button>` + wrapper.innerHTML
+            }
+
+            if (state.page != pages) {
+                wrapper.innerHTML += `<button value=${pages} class="page btn btn-sm btn-dark">Last &#187;</button>`
+            }
+
+            // page_btn = document.querySelector('.page')
+
+            
+            $('.page').on('click', function () {
+                $('#table-body').empty()
+
+                state.page = Number($(this).val())
+
+                makeTable()
+            })
+
+        }
+
+        function makePrediction() {
+            window.open('/add.html', target = '_self')
+        }
+    </script>
+</body>
+
+</html>
